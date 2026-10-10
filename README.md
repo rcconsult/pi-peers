@@ -71,6 +71,9 @@ wsl2  --reverse  /home/me/.nvm/versions/node/v25.0.0/bin/node /home/me/pi-peers/
 - **Keep `ask` unless you're sure.** `ask` shows a dialog with the message before delivering it. If it goes unanswered for 120 s, the message is refused, and an agent with no UI refuses outright. `allow` delivers without asking.
 - **Loops are capped:** a chain of peer messages stops at 3 hops.
 - **Tokens stay out of listings:** `pi-peers list` (also over SSH) and `get_state` never include them.
+- **The token is an access check, not an identity.** Anything running as you can read the discovery files, connect, and claim to be any peer. pi-peers keeps out *other* users and other machines; it can't protect you from your own compromised processes.
+- **On Windows:** the agent's named pipe is read-only for other accounts, so they can't send it anything. Token files inherit your profile's private permissions. Administrators and SYSTEM keep full access, as they do to everything.
+- **`~/.pi-peers/hosts` is configuration that gets run.** Its remote commands are executed on those hosts over SSH, so protect it like your `~/.ssh/config`.
 
 ## How it works
 

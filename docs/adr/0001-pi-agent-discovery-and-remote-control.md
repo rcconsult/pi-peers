@@ -326,12 +326,17 @@ This stops agents from probing paths that don't exist, such as trying `ssh` to t
 
 ## Still to verify before acceptance
 
-- [ ] Default and explicit DACLs on Node named pipes on Windows: can an owner-only pipe be created from Node, or do we rely on the token?
+- [x] Default and explicit DACLs on Node named pipes on Windows: can an owner-only pipe be created from Node, or do we rely on the token? **Answered** (2026-10-10, read through .NET `PipesAclExtensions`):
+  - **Default DACL:** Node pipes get the Windows default: full control for the owner, SYSTEM and Administrators; **read only** for Everyone and Anonymous.
+  - **What other accounts can do:** they can open the pipe for reading, but they can't write, so they can't send `hello` or any command, and the agent never writes to an unauthenticated connection.
+  - **Token files:** they inherit the user profile's ACL (owner, SYSTEM, Administrators only).
+  - **Conclusion:** cross-user access is blocked by the read-only pipe plus the private token. Node has no API for an owner-only DACL, and native code isn't worth it for this.
+  - **Inherent exposure:** Administrators and SYSTEM keep full access, which no user-level software can prevent.
 - [x] Can `ctx.ui.confirm()` be used from an inbound-message handler while the agent is streaming? **Yes** (2026-10-10).
   - **Terminal UI:** tested by hand with two live agents. The dialog appears at the bottom of the screen mid-run.
   - **RPC mode:** tested headless. The dialog arrives at the client as an `extension_ui_request`, and the client's answer is honoured.
 - [ ] `sendUserMessage` behaviour in non-interactive modes (`-p`, `--mode json`): disable inbound messages there?
-- [ ] Whether the Windows OpenSSH client supports `ControlMaster`.
+- [ ] Whether the Windows OpenSSH client supports `ControlMaster`. Only a performance concern now: reverse links keep one session open per host anyway.
 
 ## Open questions for the owner
 
