@@ -1,6 +1,6 @@
 {
   "name": "pi-peers",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Discovery and messaging between pi coding agents: same-host IPC, cross-host over SSH, no registry",
   "keywords": [
     "pi-package",
@@ -48,6 +48,14 @@
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",
     "typebox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "typebox": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "1.1.0",
