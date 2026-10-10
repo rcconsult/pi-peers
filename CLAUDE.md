@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **pi-peers**: lets pi coding agents discover and message each other. Phase 1 covers agents on the same host; Phase 2 (planned) works across hosts over SSH. pi is `@earendil-works/pi-coding-agent`, installed at `~/.pi/agent`.
 
-- **Names:** npm package `pi-peers`; GitHub repo [rcconsult/pi-peers](https://github.com/rcconsult/pi-peers) (private until a LICENSE and README exist). The local folder is still `pies`.
+- **Names:** npm package `pi-peers`; GitHub repo [rcconsult/pi-peers](https://github.com/rcconsult/pi-peers) (public). The local folder is still `pies`.
 - **Design:** [docs/adr/0001-pi-agent-discovery-and-remote-control.md](docs/adr/0001-pi-agent-discovery-and-remote-control.md) is the source of truth for the protocol, versioning rules, error codes and security policy. Change the ADR together with the code.
 - **pi API background:** [docs/pi-extension-research.md](docs/pi-extension-research.md). The bundled pi docs under `~/.pi/agent/install/releases/<ver>/node_modules/@earendil-works/pi-coding-agent/docs/` are authoritative.
 
