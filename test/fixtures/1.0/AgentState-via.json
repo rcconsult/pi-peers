@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0","protocol":{"version":"1.0","minVersion":"1.0"},"id":"01a12632-agent","label":"pi1","host":"workstation","runtime":"linux","via":"workstation","remoteRuntime":"win32","pid":5151,"cwd":"C:\\git\\utils\\pies","endpoint":"/home/alice/.pi-peers/run/01a12632-agent-via.sock","startedAt":"2026-10-10T18:00:00.000Z","idle":true,"status":"idle"}

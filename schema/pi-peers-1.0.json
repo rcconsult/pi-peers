@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rcconsult/pi-peers/schema/pi-peers-1.0.json",
+  "title": "PiPeers",
+  "description": "pi-peers remote-control schema, version 1.0. Wire records are newline-delimited JSON. Minor versions only add optional fields, commands, events, error codes and enum values; receivers ignore what they don't know. See docs/adr/0001-pi-agent-discovery-and-remote-control.md.",
+  "$defs": {
+    "Version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$",
+      "description": "MAJOR.MINOR"
+    },
+    "VersionRange": {
+      "type": "object",
+      "properties": {
+        "version": { "$ref": "#/$defs/Version", "description": "Highest version supported" },
+        "minVersion": { "$ref": "#/$defs/Version", "description": "Lowest version still supported" }
+      },
+      "required": ["version", "minVersion"]
+    },
+    "Peer": {
+      "type": "object",
+      "description": "Who is speaking. Shown to the receiving model in the provenance header.",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "host": { "type": "string" }
+      },
+      "required": ["id", "label", "host"]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "hello_required",
+        "auth_failed",
+        "incompatible_version",
+        "invalid_request",
+        "unsupported_command",
+        "denied",
+        "approval_timeout",
+        "no_ui",
+        "steer_not_allowed",
+        "hop_limit",
+        "ambiguous_target",
+        "agent_not_found",
+        "agent_unavailable",
+        "connection_lost",
+        "ssh_failed",
+        "internal_error"
+      ]
+    },
+    "Hello": {
+      "type": "object",
+      "description": "First record on every connection. Frozen across versions: it may only gain optional fields.",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "const": "hello" },
+        "protocol": { "$ref": "#/$defs/VersionRange" },
+        "token": { "type": "string", "description": "From the agent's discovery file. Omitted by remote clients; the bridge adds it." },
+        "from": { "$ref": "#/$defs/Peer" }
+      },
+      "required": ["id", "type", "protocol"]
+    },
+    "GetState": {
+      "type": "object",
+      "properties": { "id": { "type": "string" }, "type": { "const": "get_state" } },
+      "required": ["id", "type"]
+    },
+    "GetLastAssistantText": {
+      "type": "object",
+      "properties": { "id": { "type": "string" }, "type": { "const": "get_last_assistant_text" } },
+      "required": ["id", "type"]
+    },
+    "Delivery": {
+      "type": "object",
+      "description": "prompt, follow_up or steer: a message injected into the receiving agent.",
+      "properties": {
+        "id": { "type": "string", "description": "Also the dedupe key: a repeated id within 10 minutes returns the original response." },
+        "type": { "enum": ["prompt", "follow_up", "steer"] },
+        "message": { "type": "string", "minLength": 1 },
+        "hops": { "type": "integer", "minimum": 1, "description": "Peer messages in this chain so far, this one included. Refused above 3." },
+        "awaitsReply": { "type": "boolean", "description": "The sender waits for the answer (peers_send wait=true); shapes the reply hint." }
+      },
+      "required": ["id", "type", "message"]
+    },
+    "Request": {
+      "description": "Any record a client sends.",
+      "oneOf": [
+        { "$ref": "#/$defs/Hello" },
+        { "$ref": "#/$defs/GetState" },
+        { "$ref": "#/$defs/GetLastAssistantText" },
+        { "$ref": "#/$defs/Delivery" }
+      ]
+    },
+    "Response": {
+      "type": "object",
+      "description": "Reply to one request, matched by id. Extends pi's RPC response shape with errorCode and retryable.",
+      "properties": {
+        "type": { "const": "response" },
+        "id": { "type": "string" },
+        "command": { "type": "string" },
+        "success": { "type": "boolean" },
+        "data": {},
+        "error": { "type": "string" },
+        "errorCode": { "$ref": "#/$defs/ErrorCode" },
+        "retryable": { "type": "boolean" }
+      },
+      "required": ["type", "id", "command", "success"]
+    },
+    "AgentEntry": {
+      "type": "object",
+      "description": "Discovery file $PI_PEERS_HOME/agents/<id>.json. Readable only by the user.",
+      "properties": {
+        "schemaVersion": { "$ref": "#/$defs/Version" },
+        "protocol": { "$ref": "#/$defs/VersionRange" },
+        "id": { "type": "string", "description": "pi's session id, so it survives /reload and /resume; -<pid> appended for a second process on the same session." },
+        "sessionName": { "type": "string", "description": "The user-supplied pi session name." },
+        "piSessionId": { "type": "string" },
+        "label": { "type": "string", "description": "sessionName, else the cwd base name, else id." },
+        "host": { "type": "string" },
+        "runtime": { "type": "string", "description": "process.platform of the writer. Entries from another runtime are skipped, never pruned." },
+        "via": { "type": "string", "description": "Set by a reverse link: the host where the agent really runs." },
+        "remoteRuntime": { "type": "string", "description": "The real agent's runtime, for reverse-link entries." },
+        "pid": { "type": "integer" },
+        "cwd": { "type": "string" },
+        "endpoint": { "type": "string", "description": "Named pipe on Windows, Unix socket elsewhere." },
+        "token": { "type": "string", "description": "Secret. Never printed by list, never sent over SSH by list." },
+        "piVersion": { "type": "string" },
+        "startedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["schemaVersion", "protocol", "id", "label", "host", "pid", "cwd", "endpoint", "token", "startedAt"]
+    },
+    "AgentState": {
+      "type": "object",
+      "description": "get_state data, and each row of `pi-peers list --json`: an AgentEntry without its token, plus live status.",
+      "properties": {
+        "schemaVersion": { "$ref": "#/$defs/Version" },
+        "protocol": { "$ref": "#/$defs/VersionRange" },
+        "id": { "type": "string" },
+        "sessionName": { "type": "string" },
+        "piSessionId": { "type": "string" },
+        "label": { "type": "string" },
+        "host": { "type": "string" },
+        "runtime": { "type": "string" },
+        "via": { "type": "string" },
+        "remoteRuntime": { "type": "string" },
+        "pid": { "type": "integer" },
+        "cwd": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "piVersion": { "type": "string" },
+        "startedAt": { "type": "string" },
+        "idle": { "type": "boolean" },
+        "settled": { "type": "integer", "description": "Completed agent runs; a waiting sender compares it before and after." },
+        "status": { "type": "string", "description": "list only: idle, busy, or an error code." }
+      },
+      "required": ["id", "label", "host", "cwd"],
+      "not": { "required": ["token"] }
+    },
+    "ExposedAgent": {
+      "type": "object",
+      "description": "What a reverse link publishes about an agent on the far host.",
+      "properties": {
+        "schemaVersion": { "$ref": "#/$defs/Version" },
+        "protocol": { "$ref": "#/$defs/VersionRange" },
+        "id": { "type": "string" },
+        "sessionName": { "type": "string" },
+        "piSessionId": { "type": "string" },
+        "label": { "type": "string" },
+        "host": { "type": "string" },
+        "runtime": { "type": "string" },
+        "cwd": { "type": "string" }
+      },
+      "required": ["schemaVersion", "protocol", "id", "label", "host", "cwd"]
+    },
+    "LinkFrame": {
+      "description": "Reverse-link control records on the stdio of `ssh <host> pi-peers expose`.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "op": { "const": "expose" }, "agent": { "$ref": "#/$defs/ExposedAgent" } },
+          "required": ["op", "agent"]
+        },
+        {
+          "type": "object",
+          "properties": { "op": { "const": "update" }, "agent": { "$ref": "#/$defs/ExposedAgent" } },
+          "required": ["op", "agent"]
+        },
+        {
+          "type": "object",
+          "properties": { "op": { "const": "ready" } },
+          "required": ["op"]
+        },
+        {
+          "type": "object",
+          "properties": { "op": { "enum": ["open", "close"] }, "ch": { "type": "integer", "minimum": 1 } },
+          "required": ["op", "ch"]
+        },
+        {
+          "type": "object",
+          "properties": { "op": { "const": "rec" }, "ch": { "type": "integer", "minimum": 1 }, "rec": { "type": "object" } },
+          "required": ["op", "ch", "rec"]
+        }
+      ]
+    }
+  }
+}

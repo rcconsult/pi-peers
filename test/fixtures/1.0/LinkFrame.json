@@ -1,0 +1,1 @@
+[{"op":"expose","agent":{"schemaVersion":"1.0","protocol":{"version":"1.0","minVersion":"1.0"},"id":"01a12632-agent","label":"pi1","host":"workstation","runtime":"win32","cwd":"C:\\git\\utils\\pies"}},{"op":"ready"},{"ch":1,"op":"open"},{"ch":1,"op":"rec","rec":{"id":"g1","type":"get_state"}},{"ch":1,"op":"close"}]

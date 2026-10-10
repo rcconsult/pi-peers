@@ -1,0 +1,9 @@
+# Sensitive local files (credentials, keys, secrets)
+.local/
+
+# Build and dependencies
+node_modules/
+dist/
+
+# Per-user Claude Code notes
+CLAUDE.local.md
