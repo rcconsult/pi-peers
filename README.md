@@ -101,6 +101,10 @@ The SSH end-to-end tests run only when these are set:
 | `PI_PEERS_E2E_REMOTE_PI_CLI` | pi's `cli.js` on that host |
 | `PI_PEERS_E2E_REMOTE_NODE` | Node ≥ 22.18 on that host (default `node`) |
 
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately, as described in [SECURITY.md](SECURITY.md).
+
 ## License
 
 [MIT](LICENSE)

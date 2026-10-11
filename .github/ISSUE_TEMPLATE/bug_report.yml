@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in pi-peers doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security problems go to [private reporting](https://github.com/rcconsult/pi-peers/security/advisories/new), not here.**
+        Please remove tokens, hostnames and paths you don't want public before posting.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The smallest set of steps that shows the problem.
+      placeholder: |
+        1. Start two agents: pi -n a, pi -n b
+        2. In a, ask: "send b a message and wait"
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: setup
+    attributes:
+      label: Where are the agents?
+      multiple: true
+      options:
+        - Same machine
+        - Different machines over SSH
+        - Reverse link (--reverse)
+        - WSL involved
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: pi-peers, pi (`pi --version`) and Node (`node --version`).
+      placeholder: pi-peers 0.1.1, pi 1.1.0, Node 24.21.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating systems
+      description: Of every machine involved, including WSL distros.
+      placeholder: Windows 11 + WSL Ubuntu 24.04
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Error codes and output
+      description: Any error code (e.g. agent_unavailable, ssh_failed), the `/peers` output, or `pi-peers list` output.
+      render: text

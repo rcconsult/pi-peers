@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/rcconsult/pi-peers/security/advisories/new
+    about: Please report vulnerabilities privately, not as a public issue.
+  - name: pi itself
+    url: https://pi.dev
+    about: Problems with pi rather than pi-peers belong with the pi project.

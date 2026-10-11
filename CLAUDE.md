@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**pi-peers**: lets pi coding agents discover and message each other. Phase 1 covers agents on the same host; Phase 2 (planned) works across hosts over SSH. pi is `@earendil-works/pi-coding-agent`, installed at `~/.pi/agent`.
+**pi-peers**: lets pi coding agents discover and message each other. Phase 1 covers agents on the same host; Phase 2 works across hosts over SSH, including reverse links for hosts that can't SSH back. pi is `@earendil-works/pi-coding-agent`, installed at `~/.pi/agent`.
 
 - **Names:** npm package `pi-peers`; GitHub repo [rcconsult/pi-peers](https://github.com/rcconsult/pi-peers) (public). The local folder is still `pies`.
 - **Design:** [docs/adr/0001-pi-agent-discovery-and-remote-control.md](docs/adr/0001-pi-agent-discovery-and-remote-control.md) is the source of truth for the protocol, versioning rules, error codes and security policy. Change the ADR together with the code.
@@ -57,7 +57,8 @@ The code is TypeScript. pi loads the extension through jiti, straight from `src/
 ## Status
 
 - **Wire types:** `schema/pi-peers-1.0.json` is the source of truth. `src/schema.gen.ts` is generated from it, so never edit it by hand. Add a fixture under `test/fixtures/<version>/` for any new record shape.
-- **Publishing:** not yet published to npm.
+- **Publishing:** published to npm as `pi-peers` (account `rado`). A release means a version bump in `package.json`, a `vX.Y.Z` tag, and the user running `npm publish --access public`, which needs their one-time code.
+- **Community files:** `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md` and `.github/` templates. Keep the contributing rules in step with the constraints above.
 
 ## Sensitive files
 
