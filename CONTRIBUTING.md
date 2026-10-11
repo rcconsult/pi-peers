@@ -28,7 +28,7 @@ To try your changes in a real pi, start pi inside the repo. `.pi/extensions/pi-p
 |---|---|
 | `npm test` | Unit and schema-compatibility tests. Fast, no pi needed. |
 | `node --test test/unit/discovery.test.ts` | One test file. |
-| `npm run test:e2e` | Two real headless pi agents on this machine. It finds pi under `~/.pi/agent`, or set `PI_CLI` to pi's `cli.js`. Makes no model calls. |
+| `npm run test:e2e` | Real headless pi agents on this machine: messaging, approvals, loading twice, and the owner gate and agent rules with a scripted model (`test/e2e/faux-model.ts`). It finds pi under `~/.pi/agent`, or set `PI_CLI` to pi's `cli.js`. Makes no real model calls. |
 
 The SSH end-to-end tests (forward and reverse links) run only when you point them at a host you can reach with `ssh` without a password prompt:
 
@@ -47,6 +47,9 @@ Please run `npm run typecheck` and `npm test` before opening a pull request, plu
 - **pi's packages are provided, not bundled.** Import `@earendil-works/*` and `typebox`, but never add them as runtime dependencies.
 - **No resources at load time.** The extension opens sockets, timers and processes in `session_start` and closes them in `session_shutdown`, never in the factory.
 - **Tests never touch real agents.** Any test that writes discovery files sets `PI_PEERS_HOME` to a temporary folder.
+- **One copy per pi.** The extension steps aside when another pi-peers copy is already active in the same pi; keep `test/e2e/duplicate.test.ts` passing.
+- **Owner gate patterns** live in `src/guard.ts`. Add a unit test in `test/unit/guard.test.ts` for every pattern you add, covering both a command it must catch and an everyday one it must let through.
+- **Agent rules** in `src/rules.ts` go into every agent's system prompt. Keep them short and general; team-specific rules belong in the collaboration guide.
 
 ## Changing the protocol
 

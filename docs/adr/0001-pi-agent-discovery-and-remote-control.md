@@ -1,7 +1,7 @@
 # ADR 0001: Pi agent discovery and remote control
 
-- **Status:** Accepted. Implemented and released: Phase 1 and Phase 2 in 0.1.0, the owner gate in 0.2.0. The open items under "Still to verify" are refinements, not blockers.
-- **Date:** 2026-10-10 (updated 2026-10-11)
+- **Status:** Accepted. Implemented and released: Phase 1 and Phase 2 in 0.1.0, the owner gate in 0.2.0, tolerance of a duplicate load in 0.2.1, and built-in agent rules plus the owner gate's `config` scope in 0.3.0. The open items under "Still to verify" are refinements, not blockers.
+- **Date:** 2026-10-10 (updated 2026-10-11, 0.3.0)
 - **Scope:** Phase 1 covers agents on the same host. Phase 2 covers agents across hosts over SSH.
 - **Background:** [pi-extension-research.md](../pi-extension-research.md)
 - **Name:** `pi-peers`, decided 2026-10-10.
@@ -368,7 +368,7 @@ This stops agents from probing paths that don't exist, such as trying `ssh` to t
 - **Injection risk remains:** a peer the user trusts can still carry injected content from wherever that peer read it. The `ask` default and the provenance labels reduce this but don't remove it.
 - **Leftover files:** a crashed pi leaves a stale discovery file and, on POSIX, a socket file. They are removed lazily the next time anyone lists the directory.
 
-## Implementation status (2026-10-10)
+## Implementation status (2026-10-11)
 
 - **Phase 1:** implemented and tested by hand with two live agents on Windows. Headless tests pass on Windows and in WSL (Ubuntu 22.04 and 24.04).
 - **Phase 2:** implemented: `src/cli.ts` (`list`, `bridge`), `src/hosts.ts`, and `<host>/<name>` addressing in the tools. Tested end to end from Windows to WSL2 Ubuntu 24.04 over `ssh wsl2`:
@@ -377,6 +377,8 @@ This stops agents from probing paths that don't exist, such as trying `ssh` to t
   - a bridged `prompt` going through the remote `ask` dialog.
   - `agent_not_found` for an unknown agent, and `ssh_failed` for an unreachable host.
 - **Reverse links:** implemented and tested end to end: a WSL client reached a Windows agent through `expose`, the Windows approval dialog appeared, and its "no" came back as `denied`. A bad token gave `auth_failed`, and the WSL entry disappeared when the Windows agent exited.
+- **Owner gate and agent rules:** covered by unit tests (`test/unit/guard.test.ts`) and scripted-model e2e tests (`test/e2e/guard.test.ts`). Tested by hand with live agents: a worker asked the owner with `peers_ask_owner` before an `rm -rf` and before reading a private folder. The `config` scope and the built-in rules (0.3.0) came from a live incident, where an agent changed its own default model after reading a pasted review.
+- **Loading twice (0.2.1):** a second pi-peers copy in the same pi steps aside, before and after `/reload` (`test/e2e/duplicate.test.ts`).
 - **Testing note:** `ssh wsl2` may land in a different distro from `wsl.exe` (the default distro). Test against the distro the SSH alias actually reaches.
 
 ## Still to verify before acceptance

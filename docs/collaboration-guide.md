@@ -48,7 +48,7 @@ Messages from any other peer are refused, and the sender gets `denied`. The lead
 
 **Avoid `/peers policy allow` (allow everyone)** unless every agent on every connected host belongs to this one team, and you accept that any of them can drive any other.
 
-> **Limitation (pi-peers 0.2.x): the policy is per machine, not per agent.** It's stored in `~/.pi-peers/policy.json`, so every agent on the same machine (more exactly, every agent sharing one `PI_PEERS_HOME`) shares one policy. If the lead and its workers run on the same machine, they all have the lead's settings. That's acceptable with the recommended setup, because the lead's incoming messages are rarely used. A per-agent policy is a planned improvement.
+> **Limitation (pi-peers 0.3.x): the policy is per machine, not per agent.** It's stored in `~/.pi-peers/policy.json`, so every agent on the same machine (more exactly, every agent sharing one `PI_PEERS_HOME`) shares one policy. If the lead and its workers run on the same machine, they all have the lead's settings. That's acceptable with the recommended setup, because the lead's incoming messages are rarely used. A per-agent policy is a planned improvement.
 
 ## 3. The owner gate: what still needs you
 

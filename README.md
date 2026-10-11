@@ -9,6 +9,8 @@ This host:
 Host wsl2:
 - wsl2/pi3 (idle)
 Incoming messages: ask before delivering · always allow: none · always deny: none · may steer: none
+Owner gate: ask the owner before risky actions in peer-started work, and before configuration changes in all work
+Agent rules: in the system prompt
 ```
 
 > **Status: 0.3, experimental.** It's built for **one user's own agents**. Every peer message is a possible prompt injection, so read [Security](#security) before you allow anything without asking.
@@ -43,14 +45,14 @@ The receiving agent asks you before acting on a peer message, unless you've allo
 | Tool | `peers_send` | Sends `prompt`, `follow_up` or `steer` to a peer. With `wait=true`, it returns the peer's answer when its run finishes. |
 | Tool | `peers_read` | Reads a peer's state or its last answer. |
 | Tool | `peers_ask_owner` | Puts a question or decision to you, the human at that agent's terminal, and waits for your answer. |
-| Command | `/peers` | Shows peers and the incoming-message policy. |
+| Command | `/peers` | Shows peers, the incoming-message policy, the owner gate, and whether the built-in agent rules are on. |
 | Command | `/peers policy ask\|allow\|deny` | Sets the default for incoming messages. |
 | Command | `/peers allow\|deny\|steer\|forget <name>` | Sets per-peer exceptions. `steer` lets a peer interrupt a running turn. |
 | Command | `/peers guard ask\|block\|off`, `/peers guard scope config\|peer\|all` | Sets the owner gate for risky actions (see [Security](#security)). |
 
 **Addressing:** an agent ID, its session name, or its label (the folder name when there's no session name). An exact match wins over a case-insensitive one. An ambiguous name is refused, never guessed. On SSH hosts, use `<host>/<name>`, for example `wsl2/pi3`.
 
-**Running a team of agents** (one lead steering several workers, with approvals turned off): see the [collaboration guide](docs/collaboration-guide.md) for setup, task templates, and rules to paste into each agent's `AGENTS.md`.
+**Running a team of agents** (one lead steering several workers, with approvals turned off): see the [collaboration guide](docs/collaboration-guide.md) for setup, task templates, and team rules to add to each agent's `AGENTS.md`, on top of the built-in ones.
 
 **Stable addresses:** an agent's ID is pi's session ID, so it survives `/reload`, `/resume` and `pi -c`. A plain `pi` start is a new session, so give it a name again.
 

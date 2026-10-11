@@ -42,7 +42,7 @@ body:
     attributes:
       label: Versions
       description: pi-peers, pi (`pi --version`) and Node (`node --version`).
-      placeholder: pi-peers 0.1.1, pi 1.1.0, Node 24.21.0
+      placeholder: pi-peers 0.3.0, pi 1.1.0, Node 24.21.0
     validations:
       required: true
   - type: input
