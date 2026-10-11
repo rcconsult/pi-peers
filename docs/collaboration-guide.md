@@ -71,7 +71,8 @@ which pushes to a git remote. Allow it?     › Allow once   Deny
 - **Other machines:** `ssh`, `scp`, `rsync`, or a downloaded script piped into a shell.
 - **Infrastructure:** `kubectl`, `terraform`, `docker rm`.
 - **The system:** shutdown, registry, execution policy.
-- **Secrets and configuration:** commands touching `.ssh`, `.env`, `.npmrc`, `~/.pi`, `~/.pi-peers`, or other credential files.
+- **Secrets, even just reading them,** since a worker could hand them back to a peer: SSH keys and `~/.ssh`, `.env*`, `*.pem`/`*.key`/`*.p12`, `.npmrc`, `.netrc`, `.git-credentials`, `credentials.json`, `secrets.*`, cloud credentials (`~/.aws`, `~/.kube`, Docker `config.json`), `auth.json` (including pi's), and pi-peers tokens (`~/.pi-peers/agents`, `run`). This applies to shell commands and to pi's `read`, `grep`, `find` and `ls` tools.
+- **Changing agent, shell or git configuration:** writing to `~/.pi-peers`, `~/.pi/agent`, `~/.gitconfig`, shell profiles (`.bashrc`, `.zshrc`, `$PROFILE`, …). *Reading* these passes, so a peer can ask "what's your policy?" without bothering you.
 - **Files:** writing or editing outside the agent's working folder, or writing to sensitive files (`.env`, keys, `.git/`, `.github/workflows/`).
 
 **What happens next:**
@@ -90,10 +91,10 @@ which pushes to a git remote. Allow it?     › Allow once   Deny
 | `/peers guard off` | No gate (not recommended with `allow`) |
 | `/peers guard scope all` | Also gate your *own* turns, a general-purpose safety net. `scope peer` is the default. |
 
-You can add your own patterns, such as a deploy script, under `"guard": { "extraPatterns": ["make deploy-prod"] }` in `~/.pi-peers/policy.json`. They are case-insensitive regular expressions matched against shell commands.
+You can add your own patterns under `"guard": { "extraPatterns": [...] }` in `~/.pi-peers/policy.json`, for example a deploy script (`"make deploy-prod"`) or a personal secrets folder (`"\\.local[\\\\/]"`, which is `\.local[\\/]` once JSON-unescaped). They are case-insensitive regular expressions, matched against shell commands and against the file paths of `read`, `grep`, `find`, `ls`, `write` and `edit`.
 
 **Limits:**
-- The gate judges pi's built-in tools: `bash`, `powershell`, `write` and `edit`. MCP and other extension tools pass unchecked.
+- The gate judges pi's built-in tools: `bash`, `powershell`, `write`, `edit`, and (for secrets) `read`, `grep`, `find` and `ls`. MCP and other extension tools pass unchecked.
 - A command can be phrased so that no pattern sees it, for example built from variables or hidden inside a script file.
 - So the gate is a strong safety net for honest mistakes and casual injections, **not a sandbox**. For untrusted work, run pi in a container or VM; see pi's `docs/security.md`.
 

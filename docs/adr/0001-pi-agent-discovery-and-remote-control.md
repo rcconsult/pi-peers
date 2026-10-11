@@ -280,9 +280,11 @@ SSH often works in only one direction. A laptop can reach a server or WSL, but n
 
 pi has no permission prompts of its own: it runs tool calls without asking (pi `docs/security.md`). Under the `allow` policy, nothing stood between a peer's request and a risky action. pi-peers adds two things.
 
-**The guard.** It hooks `tool_call`. While the current work was started by a peer message (`chainHops > 0`), each `bash`, `powershell`, `write` and `edit` call is checked against `src/guard.ts`:
-- **Shell patterns:** pushing, history rewrites, recursive or forced deletes, privilege elevation, publishing, GitHub state changes, installs, other machines, piped downloads, infrastructure, system changes, and credential or agent config files.
-- **Write paths:** writes outside the working folder, or to sensitive files.
+**The guard.** It hooks `tool_call`. While the current work was started by a peer message (`chainHops > 0`), tool calls are checked against `src/guard.ts`:
+- **Shell commands** (`bash`, `powershell`): pushing, history rewrites, recursive or forced deletes, privilege elevation, publishing, GitHub state changes, installs, other machines, piped downloads, infrastructure, system changes.
+- **Secrets, even when only read.** Under `allow`, a worker could hand file contents back to a peer, so reading counts as risky. This covers keys and `.ssh`, `.env*`, `.npmrc`, `.netrc`, `.git-credentials`, cloud credentials, `auth.json`, and pi-peers tokens. It is checked in shell commands and in the `read`/`grep`/`find`/`ls` paths (and `grep`'s glob).
+- **Agent, shell and git configuration** (`~/.pi-peers`, `~/.pi/agent`, `.gitconfig`, shell profiles): only *changes* are gated, meaning a configuration path combined with a write construct. Reading passes.
+- **Write paths** (`write`, `edit`): writes outside the working folder, or to sensitive files.
 
 It is configured in `policy.json` under `guard`:
 
@@ -307,6 +309,7 @@ The gate is a safety net against mistakes and casual prompt injection, not a san
 
 **Tested** with a scripted model (`test/e2e/guard.test.ts`, using pi-ai's faux provider):
 - a peer's `rm -rf` denied (the folder survives), then allowed (the folder is removed).
+- a `read` of `.env` denied, with the secret never reaching the reply.
 - the owner's own turn not gated.
 - `peers_ask_owner` returning the owner's answer.
 - block mode refusing `git push` without a dialog.

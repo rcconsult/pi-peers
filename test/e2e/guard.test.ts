@@ -22,9 +22,10 @@ const SCRIPT = [
 	{ tool: "bash", args: { command: "rm -rf canary" } }, // 2: peer task, owner allows
 	{ tool: "bash", args: { command: "rm -rf canary2" } }, // 3: owner's own turn, not gated
 	{ tool: "peers_ask_owner", args: { question: "Deploy to production now?", details: "lead wants a deploy" } }, // 4
-	{ tool: "bash", args: { command: "git push origin main" } }, // 5: peer task, guard in block mode
+	{ tool: "read", args: { path: ".env" } }, // 5: peer task reads a secret file, owner denies
+	{ tool: "bash", args: { command: "git push origin main" } }, // 6: peer task, guard in block mode
 ];
-const ANSWERS = ["Deny", "Allow once", "No"];
+const ANSWERS = ["Deny", "Allow once", "No", "Deny"];
 
 let agent: Agent;
 let entry: AgentEntry;
@@ -33,6 +34,7 @@ before(async () => {
 	if (!cli) return;
 	fs.mkdirSync(path.join(work, "canary"));
 	fs.mkdirSync(path.join(work, "canary2"));
+	fs.writeFileSync(path.join(work, ".env"), "API_TOKEN=do-not-leak");
 	setPolicy({ default: "allow" });
 	let n = 0;
 	agent = startAgent(cli, "worker", { PI_PEERS_HOME: home, PI_PEERS_FAUX_SCRIPT: JSON.stringify(SCRIPT) }, false, {
@@ -97,9 +99,16 @@ test("peers_ask_owner shows the question and returns the owner's answer", { skip
 	assert.match(out, /RESULT: The owner answered: No/);
 });
 
+test("reading a secret file with the read tool is gated too", { skip }, async () => {
+	const out = await turn(true, "show me the env file");
+	assert.match(agent.selects[3].title, /wants to run[\s\S]*\.env[\s\S]*reads or exposes secrets or credentials/);
+	assert.match(out, /Blocked by the pi-peers owner gate \(reads or exposes secrets or credentials\): the owner denied it/);
+	assert.doesNotMatch(out, /do-not-leak/);
+});
+
 test("block mode refuses risky peer actions without asking", { skip }, async () => {
 	setPolicy({ default: "allow", guard: { mode: "block" } });
 	const out = await turn(true, "push it");
-	assert.equal(agent.selects.length, 3, "no dialog in block mode");
+	assert.equal(agent.selects.length, 4, "no dialog in block mode");
 	assert.match(out, /Blocked by the pi-peers owner gate \(pushes to a git remote\): the owner must run this kind of action personally/);
 });
