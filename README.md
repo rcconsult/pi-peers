@@ -11,15 +11,15 @@ Host wsl2:
 Incoming messages: ask before delivering · always allow: none · always deny: none · may steer: none
 ```
 
-> **Status: 0.1.0, experimental.** It's built for **one user's own agents**. Every peer message is a possible prompt injection, so read [Security](#security) before you allow anything without asking.
+> **Status: 0.2, experimental.** It's built for **one user's own agents**. Every peer message is a possible prompt injection, so read [Security](#security) before you allow anything without asking.
 
 ## Install
 
 ```bash
-pi install git:github.com/rcconsult/pi-peers
+pi install npm:pi-peers
 ```
 
-After the npm release, `pi install npm:pi-peers` will also work. Then run `/reload` in your running agents, or restart them.
+Or straight from GitHub: `pi install git:github.com/rcconsult/pi-peers`. Then run `/reload` in your running agents, or restart them.
 
 Requirements:
 - pi 1.1 or later.

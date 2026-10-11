@@ -1,7 +1,7 @@
 # ADR 0001: Pi agent discovery and remote control
 
-- **Status:** Proposed
-- **Date:** 2026-10-10
+- **Status:** Accepted. Implemented and released: Phase 1 and Phase 2 in 0.1.0, the owner gate in 0.2.0. The open items under "Still to verify" are refinements, not blockers.
+- **Date:** 2026-10-10 (updated 2026-10-11)
 - **Scope:** Phase 1 covers agents on the same host. Phase 2 covers agents across hosts over SSH.
 - **Background:** [pi-extension-research.md](../pi-extension-research.md)
 - **Name:** `pi-peers`, decided 2026-10-10.

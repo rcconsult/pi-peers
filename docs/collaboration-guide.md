@@ -48,7 +48,7 @@ Messages from any other peer are refused, and the sender gets `denied`. The lead
 
 **Avoid `/peers policy allow` (allow everyone)** unless every agent on every connected host belongs to this one team, and you accept that any of them can drive any other.
 
-> **Limitation (pi-peers 0.1.x): the policy is per machine, not per agent.** It's stored in `~/.pi-peers/policy.json`, so every agent on the same machine (more exactly, every agent sharing one `PI_PEERS_HOME`) shares one policy. If the lead and its workers run on the same machine, they all have the lead's settings. That's acceptable with the recommended setup, because the lead's incoming messages are rarely used. A per-agent policy is a planned improvement.
+> **Limitation (pi-peers 0.2.x): the policy is per machine, not per agent.** It's stored in `~/.pi-peers/policy.json`, so every agent on the same machine (more exactly, every agent sharing one `PI_PEERS_HOME`) shares one policy. If the lead and its workers run on the same machine, they all have the lead's settings. That's acceptable with the recommended setup, because the lead's incoming messages are rarely used. A per-agent policy is a planned improvement.
 
 ## 3. The owner gate: what still needs you
 
@@ -96,6 +96,7 @@ You can add your own patterns under `"guard": { "extraPatterns": [...] }` in `~/
 **Limits:**
 - The gate judges pi's built-in tools: `bash`, `powershell`, `write`, `edit`, and (for secrets) `read`, `grep`, `find` and `ls`. MCP and other extension tools pass unchecked.
 - A command can be phrased so that no pattern sees it, for example built from variables or hidden inside a script file.
+- **Double prompts:** if the agent asks you with `peers_ask_owner` and you say yes, the gate still asks once more when it runs the risky command itself. It can't tell that you just approved the same action. Safe but redundant; answer both.
 - So the gate is a strong safety net for honest mistakes and casual injections, **not a sandbox**. For untrusted work, run pi in a container or VM; see pi's `docs/security.md`.
 
 ## 4. Keep workers out of each other's way
