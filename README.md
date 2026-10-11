@@ -21,6 +21,8 @@ pi install npm:pi-peers
 
 Or straight from GitHub: `pi install git:github.com/rcconsult/pi-peers`. Then run `/reload` in your running agents, or restart them.
 
+If pi-peers ends up loaded twice in one pi, for example as an installed package *and* as a project extension, the first copy stays active and the other shows a warning naming it. Before 0.2.1, pi refused to start in that case.
+
 Requirements:
 - pi 1.1 or later.
 - Node ≥ 22.18 wherever the `pi-peers` CLI runs. That's only needed on the remote hosts.

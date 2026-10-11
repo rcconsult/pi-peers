@@ -51,6 +51,7 @@ The code is TypeScript. pi loads the extension through jiti, straight from `src/
 
 - **Plain `node` compatibility:** keep the code runnable under Node's built-in TypeScript type stripping, so the CLI runs on plain `node` in development and over SSH. That means no parameter properties, enums or namespaces, and `.ts` extensions in relative imports.
 - **Don't bundle host packages:** `@earendil-works/*` and `typebox` are supplied by pi. Import them, but never bundle them.
+- **One copy per pi:** the extension factory steps aside when another pi-peers copy is already active in the process (a `Symbol.for` registry, cleared on `session_shutdown`). Otherwise this repo's `.pi/extensions` shim plus an installed package would make pi refuse to start. `test/e2e/duplicate.test.ts` covers it, including a reload.
 - **Don't start resources at load time:** never open sockets, timers or processes in the extension factory. Start them in `session_start` and stop them in `session_shutdown`.
 - **Separate runtimes:** each runtime (Windows, each WSL distro) has its own `~/.pi-peers`; never share one between runtimes. Cross-runtime traffic goes over SSH, like remote hosts.
 - **Verify, don't assume:** discovery tests that touch real agents should set `PI_PEERS_HOME` to a scratch directory, so the user's live agents and policy aren't disturbed.

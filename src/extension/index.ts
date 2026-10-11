@@ -6,6 +6,7 @@ import * as fs from "node:fs";
 import * as net from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Duplex } from "node:stream";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
@@ -106,7 +107,39 @@ function lastAssistantText(ctx: ExtensionContext): string | undefined {
 
 const text = (t: string) => ({ content: [{ type: "text" as const, text: t }], details: {} });
 
+/**
+ * One pi-peers per pi process. pi refuses to start when two copies register the same tools,
+ * which happens when pi-peers is both a project extension (e.g. this repo's .pi/extensions shim)
+ * and an installed package. The first copy loaded stays active; later ones step aside.
+ * The mark is process-wide (Symbol.for) so separately loaded module copies see it.
+ */
+const ACTIVE = Symbol.for("pi-peers.active-copy");
+type ActiveRegistry = { [ACTIVE]?: string };
+
+function thisCopy(): string {
+	try {
+		return fileURLToPath(import.meta.url);
+	} catch {
+		return "unknown location";
+	}
+}
+
 export default function piPeers(pi: ExtensionAPI) {
+	const registry = globalThis as ActiveRegistry;
+	const here = thisCopy();
+	const active = registry[ACTIVE];
+	if (active !== undefined) {
+		const note = `pi-peers: another copy is already active in this pi (${active}); this copy (${here}) stays inactive.`;
+		console.warn(note);
+		pi.on("session_start", (_e, c) => c.ui.notify(note, "warning"));
+		return;
+	}
+	registry[ACTIVE] = here;
+	// Cleared when this runtime ends (quit, /reload, new or resumed session), so the next runtime loads again.
+	pi.on("session_shutdown", () => {
+		if (registry[ACTIVE] === here) delete registry[ACTIVE];
+	});
+
 	let ctx: ExtensionContext | undefined;
 	let server: net.Server | undefined;
 	let entry: AgentEntry | undefined;
