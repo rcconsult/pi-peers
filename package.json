@@ -1,6 +1,6 @@
 {
   "name": "pi-peers",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Discovery and messaging between pi coding agents: same-host IPC, cross-host over SSH, no registry",
   "keywords": [
     "pi-package",

@@ -11,7 +11,8 @@ import type { Duplex } from "node:stream";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 import { PeersClient } from "../client.ts";
-import { type GuardConfig, guardFrom, riskOf } from "../guard.ts";
+import { configRiskOf, type GuardConfig, guardFrom, riskOf } from "../guard.ts";
+import { AGENT_RULES, RULES_SECTION } from "../rules.ts";
 import { connectRemote, type ExposedAgent, listRemote, openReverseLink, readHosts, type ReverseLink, splitAddress } from "../hosts.ts";
 import {
 	type AgentEntry,
@@ -61,6 +62,8 @@ interface Policy {
 	steer: string[];
 	/** Owner gate for risky tool calls in peer-started work; see src/guard.ts. */
 	guard?: Partial<GuardConfig>;
+	/** false: don't add pi-peers' agent rules (src/rules.ts) to the system prompt. Default true. */
+	rules?: boolean;
 }
 
 const policyPath = (): string => path.join(peersHome(), "policy.json");
@@ -410,13 +413,16 @@ export default function piPeers(pi: ExtensionAPI) {
 	}
 
 	// Owner gate: risky tool calls in peer-started work wait for the owner, even when the
-	// incoming-message policy is "allow". The owner's own turns pass unless scope is "all".
+	// incoming-message policy is "allow". In the owner's own turns, scope "config" (the default)
+	// gates only configuration changes, "all" gates everything, "peer" nothing.
 	pi.on("tool_call", async (event, c) => {
 		const guard = guardFrom(loadPolicy().guard);
 		if (guard.mode === "off") return undefined;
 		const peer = chainHops > 0 ? drivingPeer : undefined;
-		if (!peer && guard.scope !== "all") return undefined;
-		const risk = riskOf(event.toolName, event.input as Record<string, unknown>, c.cwd, guard.extraPatterns);
+		if (!peer && guard.scope === "peer") return undefined;
+		const input = event.input as Record<string, unknown>;
+		const risk =
+			peer || guard.scope === "all" ? riskOf(event.toolName, input, c.cwd, guard.extraPatterns) : configRiskOf(event.toolName, input, c.cwd);
 		if (!risk) return undefined;
 
 		const who = peer ? `a task from peer "${peer.label}"@${peer.host}` : "this task";
@@ -434,6 +440,12 @@ export default function piPeers(pi: ExtensionAPI) {
 			}),
 		);
 		return choice === "Allow once" ? undefined : blocked(choice === undefined ? "the owner didn't answer in time" : "the owner denied it");
+	});
+	// Agent rules in every system prompt, unless the owner turned them off in policy.json.
+	pi.on("before_agent_start", (event) => {
+		if (loadPolicy().rules === false) delete event.systemPromptOptions.sections[RULES_SECTION];
+		else event.systemPromptOptions.sections[RULES_SECTION] = AGENT_RULES;
+		return undefined;
 	});
 	pi.on("session_shutdown", () => stop());
 	process.once("exit", () => entry && removeEntry(entry.id));
@@ -527,10 +539,13 @@ export default function piPeers(pi: ExtensionAPI) {
 		const gate =
 			g.mode === "off"
 				? "off: risky actions run without asking"
-				: `${g.mode === "ask" ? "ask the owner" : "refuse"} before risky actions in ${g.scope === "all" ? "all work" : "peer-started work"}`;
+				: `${g.mode === "ask" ? "ask the owner" : "refuse"} before risky actions in ${
+						{ all: "all work", config: "peer-started work, and before configuration changes in all work", peer: "peer-started work" }[g.scope]
+					}`;
 		return [
 			`Incoming messages: ${mode} · always allow: ${names(p.allow)} · always deny: ${names(p.deny)} · may steer: ${names(p.steer)}`,
 			`Owner gate: ${gate}${g.extraPatterns.length ? ` · extra patterns: ${g.extraPatterns.join(", ")}` : ""}`,
+			`Agent rules: ${p.rules === false ? "off" : "in the system prompt"}`,
 		].join("\n");
 	}
 
@@ -634,7 +649,7 @@ export default function piPeers(pi: ExtensionAPI) {
 
 	pi.registerCommand("peers", {
 		description:
-			"pi-peers: list peers and set policies: /peers [list | policy ask|allow|deny | allow|deny|steer|forget <label> | guard ask|block|off | guard scope peer|all]",
+			"pi-peers: list peers and set policies: /peers [list | policy ask|allow|deny | allow|deny|steer|forget <label> | guard ask|block|off | guard scope peer|config|all]",
 		handler: async (args, c) => {
 			const [verb, ...rest] = args.trim().split(/\s+/).filter(Boolean);
 			const arg = rest.join(" ");
@@ -644,7 +659,7 @@ export default function piPeers(pi: ExtensionAPI) {
 			else if (verb === "guard" && ["ask", "block", "off"].includes(arg)) {
 				p.guard = { ...guardFrom(p.guard), mode: arg as GuardConfig["mode"] };
 				guardChanged = true;
-			} else if (verb === "guard" && ["scope peer", "scope all"].includes(arg)) {
+			} else if (verb === "guard" && ["scope peer", "scope config", "scope all"].includes(arg)) {
 				p.guard = { ...guardFrom(p.guard), scope: arg.slice(6) as GuardConfig["scope"] };
 				guardChanged = true;
 			} else if (verb && ["allow", "deny", "steer"].includes(verb) && arg) {
@@ -654,7 +669,7 @@ export default function piPeers(pi: ExtensionAPI) {
 				for (const k of ["allow", "deny", "steer"] as const) p[k] = p[k].filter((x) => x !== arg);
 			} else if (verb && verb !== "list") {
 				c.ui.notify(
-					"Usage: /peers [list | policy ask|allow|deny | allow|deny|steer|forget <label> | guard ask|block|off | guard scope peer|all]",
+					"Usage: /peers [list | policy ask|allow|deny | allow|deny|steer|forget <label> | guard ask|block|off | guard scope peer|config|all]",
 					"warning",
 				);
 			}

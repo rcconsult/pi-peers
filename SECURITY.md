@@ -6,8 +6,8 @@ pi-peers is young; only the latest release gets fixes.
 
 | Version | Supported |
 |---|---|
-| 0.2.x (latest) | ✅ |
-| 0.1.x and older | ❌ |
+| 0.3.x (latest) | ✅ |
+| 0.2.x and older | ❌ |
 
 ## Reporting a vulnerability
 

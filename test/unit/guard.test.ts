@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as os from "node:os";
 import * as path from "node:path";
 import { test } from "node:test";
-import { DEFAULT_GUARD, guardFrom, riskOf } from "../../src/guard.ts";
+import { configRiskOf, DEFAULT_GUARD, guardFrom, riskOf } from "../../src/guard.ts";
 
 const cwd = path.join(os.tmpdir(), "work", "repo");
 const sh = (command: string, extra?: string[]) => riskOf("bash", { command }, cwd, extra);
@@ -132,11 +132,40 @@ test("writes outside the working folder or to sensitive files need the owner", (
 	assert.equal(riskOf("write", { path: "src/a.ts" }, cwd), undefined);
 	assert.equal(riskOf("edit", { path: path.join(cwd, "docs", "x.md") }, cwd), undefined);
 	assert.equal(riskOf("write", { path: "../other/a.ts" }, cwd), "writes outside the working folder");
-	assert.equal(riskOf("write", { path: "~/.bashrc" }, cwd), "writes outside the working folder");
+	assert.equal(riskOf("write", { path: "~/.bashrc" }, cwd), "changes agent, shell or git configuration");
+	assert.equal(riskOf("write", { path: "~/notes.txt" }, cwd), "writes outside the working folder");
 	assert.equal(riskOf("edit", { path: ".env" }, cwd), "writes a sensitive or configuration file");
 	assert.equal(riskOf("write", { path: ".github/workflows/ci.yml" }, cwd), "writes a sensitive or configuration file");
 	assert.equal(riskOf("write", { path: "certs/server.key" }, cwd), "writes a sensitive or configuration file");
-	assert.equal(riskOf("edit", { path: ".git/config" }, cwd), "writes a sensitive or configuration file");
+	assert.equal(riskOf("edit", { path: ".git/config" }, cwd), "changes agent, shell or git configuration");
+	assert.equal(riskOf("edit", { path: ".git/info/exclude" }, cwd), "writes a sensitive or configuration file");
+});
+
+test("configRiskOf: configuration changes only, for the owner's own turns", () => {
+	const cfg = (tool: string, input: Record<string, unknown>) => configRiskOf(tool, input, cwd);
+	const changes = "changes agent, shell or git configuration";
+	// The incident behind scope "config": an agent rewrote pi's default model after a mere suggestion.
+	assert.equal(cfg("write", { path: "~/.pi/agent/settings.json" }), changes);
+	assert.equal(cfg("edit", { path: path.join(os.homedir(), ".pi", "agent", "rules", "pi-peers.md") }), changes);
+	assert.equal(cfg("write", { path: ".pi/extensions/x.ts" }), changes);
+	assert.equal(cfg("edit", { path: "AGENTS.md" }), changes);
+	assert.equal(cfg("edit", { path: "~/.pi-peers/policy.json" }), changes);
+	assert.equal(cfg("write", { path: "~/.bashrc" }), changes);
+	assert.equal(cfg("write", { path: ".git/hooks/pre-commit" }), changes);
+	assert.equal(cfg("bash", { command: "sed -i s/kimi/luna/ ~/.pi/agent/settings.json" }), changes);
+	assert.equal(cfg("bash", { command: "echo '- new rule' >> AGENTS.md" }), changes);
+	assert.equal(cfg("bash", { command: "git config --global core.editor vim" }), "changes global git configuration");
+	// Everyday owner work passes, including other risky actions the owner asked for.
+	for (const c of ["git push origin main", "rm -rf build", "npm publish", "cat ~/.pi/agent/settings.json", "git config user.name x"]) {
+		assert.equal(cfg("bash", { command: c }), undefined, c);
+	}
+	assert.equal(cfg("write", { path: "src/a.ts" }), undefined);
+	assert.equal(cfg("write", { path: "../other/a.ts" }), undefined);
+	assert.equal(cfg("edit", { path: "docs/pi-notes.md" }), undefined);
+	assert.equal(cfg("read", { path: "~/.pi/agent/settings.json" }), undefined);
+	// Every configuration change is also a risk in peer-started work.
+	assert.equal(riskOf("edit", { path: "AGENTS.md" }, cwd), changes);
+	assert.equal(riskOf("write", { path: "~/.pi/agent/settings.json" }, cwd), changes);
 });
 
 test("other tools pass", () => {
@@ -147,4 +176,6 @@ test("guardFrom fills defaults and drops junk", () => {
 	assert.deepEqual(guardFrom(undefined), DEFAULT_GUARD);
 	assert.deepEqual(guardFrom({ mode: "block", scope: "all", extraPatterns: ["a", 3] }), { mode: "block", scope: "all", extraPatterns: ["a"] });
 	assert.deepEqual(guardFrom({ mode: "yolo", scope: 1 }), DEFAULT_GUARD);
+	assert.equal(DEFAULT_GUARD.scope, "config");
+	assert.equal(guardFrom({ scope: "peer" }).scope, "peer");
 });

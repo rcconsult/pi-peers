@@ -35,9 +35,10 @@ The code is TypeScript. pi loads the extension through jiti, straight from `src/
 | `src/discovery.ts` | Rendezvous directory `~/.pi-peers/agents/` (`PI_PEERS_HOME` overrides it), liveness pruning, resolving a peer by id, session name or label |
 | `src/client.ts` | Client: `hello`, then request/response matched by `id`, over any duplex stream |
 | `src/hosts.ts` | Phase 2: `$PI_PEERS_HOME/hosts`, remote `list`, `bridge` over `ssh <alias>`, and reverse links (`--reverse` → `expose`) |
-| `src/guard.ts` | Owner gate rules: which tool calls (shell patterns, write paths) need the owner in peer-started work. Pure, unit-tested |
+| `src/guard.ts` | Owner gate rules: which tool calls (shell patterns, write paths) need the owner in peer-started work, and which configuration changes need the owner in any turn (`configRiskOf`, scope `config`). Pure, unit-tested |
+| `src/rules.ts` | Agent rules the extension adds to every system prompt (section `pi-peers-rules`; `"rules": false` in policy.json turns them off). Keep them short: they are sent to the model |
 | `src/cli.ts` | CLI run on each host: `list [--json]`, `bridge <address>`, `expose` (far end of a reverse link). Run it as `node src/cli.ts …` (Node ≥ 22.18) |
-| `src/extension/index.ts` | The pi extension: pipe/socket server, tools `peers_list` / `peers_send` / `peers_read` / `peers_ask_owner`, `/peers` command, inbound policy, and the owner gate (a `tool_call` hook using `src/guard.ts`) |
+| `src/extension/index.ts` | The pi extension: pipe/socket server, tools `peers_list` / `peers_send` / `peers_read` / `peers_ask_owner`, `/peers` command, inbound policy, the owner gate (a `tool_call` hook using `src/guard.ts`), and the agent rules (a `before_agent_start` hook using `src/rules.ts`) |
 | `.pi/extensions/pi-peers.ts` | Dev shim that loads the extension into pi agents started in this repo. It requires project trust; run `/reload` after changes |
 
 **How a message flows:**
