@@ -276,6 +276,41 @@ SSH often works in only one direction. A laptop can reach a server or WSL, but n
   - The inbound policy, approval dialog and hop limit apply unchanged.
 - **Liveness:** the far-end entry's PID is the `expose` process. When the agent exits, SSH closes, `expose` sees end-of-input, and it removes the entry.
 
+### Owner gate (0.2.0)
+
+pi has no permission prompts of its own: it runs tool calls without asking (pi `docs/security.md`). Under the `allow` policy, nothing stood between a peer's request and a risky action. pi-peers adds two things.
+
+**The guard.** It hooks `tool_call`. While the current work was started by a peer message (`chainHops > 0`), each `bash`, `powershell`, `write` and `edit` call is checked against `src/guard.ts`:
+- **Shell patterns:** pushing, history rewrites, recursive or forced deletes, privilege elevation, publishing, GitHub state changes, installs, other machines, piped downloads, infrastructure, system changes, and credential or agent config files.
+- **Write paths:** writes outside the working folder, or to sensitive files.
+
+It is configured in `policy.json` under `guard`:
+
+| Setting | Values |
+|---|---|
+| `mode` | `ask` (default: `ctx.ui.select` "Allow once / Deny", 120 s timeout, no answer means deny), `block` (refuse without asking), `off` |
+| `scope` | `peer` (default) or `all`, which also gates the owner's own turns |
+| `extraPatterns` | extra regular expressions matched against shell commands |
+
+- **No UI:** a risky peer action is blocked when the agent has no UI.
+- **What the agent sees:** a blocked call returns `{block: true, reason}`. The reason tells the model not to retry, and to report `NEEDS OWNER: <action>` or ask with `peers_ask_owner`.
+- **Delivered messages** carry a line saying risky actions need the owner, unless the guard is off.
+
+**`peers_ask_owner` tool.** The model puts a question to the owner as a select dialog, with an "Answer in my own words" option. It waits up to 5 minutes, and no answer means "not approved". Gate dialogs, `ask_owner` dialogs and incoming-message approvals share one queue, so they never overlap.
+
+**Limits, by design:**
+- Only built-in tools are judged.
+- Patterns can be evaded by obfuscation.
+- The policy, guard included, is per `PI_PEERS_HOME`, not per agent.
+
+The gate is a safety net against mistakes and casual prompt injection, not a sandbox. Isolation (container or VM) remains the boundary for untrusted work.
+
+**Tested** with a scripted model (`test/e2e/guard.test.ts`, using pi-ai's faux provider):
+- a peer's `rm -rf` denied (the folder survives), then allowed (the folder is removed).
+- the owner's own turn not gated.
+- `peers_ask_owner` returning the owner's answer.
+- block mode refusing `git push` without a dialog.
+
 ### Reply hint
 
 Each delivered message carries, under the provenance header, one line telling the receiving model how to answer:

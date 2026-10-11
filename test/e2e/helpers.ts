@@ -28,22 +28,40 @@ export interface Agent {
 	proc: ChildProcessWithoutNullStreams;
 	/** Titles of approval dialogs seen so far. */
 	dialogs: string[];
+	/** Select dialogs seen so far (owner gate, peers_ask_owner), with the answer given. */
+	selects: Array<{ title: string; options: string[]; answer: string | undefined }>;
 	notes: string[];
 	statuses: Map<string, string>;
+	/** Send the agent an owner (non-peer) prompt over RPC. */
+	ownerPrompt(message: string): void;
 	kill(): Promise<void>;
 }
 
+export interface AgentOptions {
+	cwd?: string;
+	/** Extra pi CLI arguments, e.g. ["-e", file, "--provider", "faux", "--model", "faux-1"]. */
+	args?: string[];
+	/** Answer for select dialogs; undefined dismisses. Default: the last option. */
+	onSelect?: (title: string, options: string[]) => string | undefined;
+}
+
+/** pi CLI arguments that load the scripted test model; pass `script` via PI_PEERS_FAUX_SCRIPT. */
+export const FAUX_MODEL_ARGS = ["-e", path.join(REPO, "test/e2e/faux-model.ts"), "--provider", "faux", "--model", "faux-1"];
+
 /** Start a headless pi with the extension. Approval dialogs are answered with `confirm`. */
-export function startAgent(cli: string, name: string, env: NodeJS.ProcessEnv, confirm = false): Agent {
-	const proc = spawn(process.execPath, [cli, "--mode", "rpc", "--no-session", "--offline", "-ne", "-na", "-e", EXTENSION, "--name", name], {
-		cwd: REPO,
-		env: { ...process.env, ...env },
-	});
+export function startAgent(cli: string, name: string, env: NodeJS.ProcessEnv, confirm = false, opts: AgentOptions = {}): Agent {
+	const proc = spawn(
+		process.execPath,
+		[cli, "--mode", "rpc", "--no-session", "--offline", "-ne", "-na", "-e", EXTENSION, "--name", name, ...(opts.args ?? [])],
+		{ cwd: opts.cwd ?? REPO, env: { ...process.env, ...env } },
+	);
 	const agent: Agent = {
 		proc,
 		dialogs: [],
+		selects: [],
 		notes: [],
 		statuses: new Map(),
+		ownerPrompt: (message) => proc.stdin.write(`${JSON.stringify({ id: `owner-${Date.now()}`, type: "prompt", message })}\n`),
 		kill: () =>
 			new Promise((resolve) => {
 				if (proc.exitCode !== null) return resolve();
@@ -58,7 +76,16 @@ export function startAgent(cli: string, name: string, env: NodeJS.ProcessEnv, co
 		while ((i = buf.indexOf("\n")) >= 0) {
 			const line = buf.slice(0, i);
 			buf = buf.slice(i + 1);
-			let r: { type?: string; method?: string; id?: string; title?: string; message?: string; statusKey?: string; statusText?: string };
+			let r: {
+				type?: string;
+				method?: string;
+				id?: string;
+				title?: string;
+				message?: string;
+				options?: string[];
+				statusKey?: string;
+				statusText?: string;
+			};
 			try {
 				r = JSON.parse(line);
 			} catch {
@@ -68,6 +95,12 @@ export function startAgent(cli: string, name: string, env: NodeJS.ProcessEnv, co
 			if (r.method === "confirm") {
 				agent.dialogs.push(r.title ?? "");
 				proc.stdin.write(`${JSON.stringify({ type: "extension_ui_response", id: r.id, confirmed: confirm })}\n`);
+			} else if (r.method === "select") {
+				const options = r.options ?? [];
+				const answer = opts.onSelect ? opts.onSelect(r.title ?? "", options) : options[options.length - 1];
+				agent.selects.push({ title: r.title ?? "", options, answer });
+				const response = answer === undefined ? { cancelled: true } : { value: answer };
+				proc.stdin.write(`${JSON.stringify({ type: "extension_ui_response", id: r.id, ...response })}\n`);
 			} else if (r.method === "notify") agent.notes.push(r.message ?? "");
 			else if (r.method === "setStatus" && r.statusKey) agent.statuses.set(r.statusKey, r.statusText ?? "");
 		}

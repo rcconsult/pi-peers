@@ -40,11 +40,15 @@ The receiving agent asks you before acting on a peer message, unless you've allo
 | Tool | `peers_list` | Lists peers on this host and on configured SSH hosts. |
 | Tool | `peers_send` | Sends `prompt`, `follow_up` or `steer` to a peer. With `wait=true`, it returns the peer's answer when its run finishes. |
 | Tool | `peers_read` | Reads a peer's state or its last answer. |
+| Tool | `peers_ask_owner` | Puts a question or decision to you, the human at that agent's terminal, and waits for your answer. |
 | Command | `/peers` | Shows peers and the incoming-message policy. |
 | Command | `/peers policy ask\|allow\|deny` | Sets the default for incoming messages. |
 | Command | `/peers allow\|deny\|steer\|forget <name>` | Sets per-peer exceptions. `steer` lets a peer interrupt a running turn. |
+| Command | `/peers guard ask\|block\|off`, `/peers guard scope peer\|all` | Sets the owner gate for risky actions (see [Security](#security)). |
 
 **Addressing:** an agent ID, its session name, or its label (the folder name when there's no session name). An exact match wins over a case-insensitive one. An ambiguous name is refused, never guessed. On SSH hosts, use `<host>/<name>`, for example `wsl2/pi3`.
+
+**Running a team of agents** (one lead steering several workers, with approvals turned off): see the [collaboration guide](docs/collaboration-guide.md) for setup, task templates, and rules to paste into each agent's `AGENTS.md`.
 
 **Stable addresses:** an agent's ID is pi's session ID, so it survives `/reload`, `/resume` and `pi -c`. A plain `pi` start is a new session, so give it a name again.
 
@@ -68,6 +72,7 @@ wsl2  --reverse  /home/me/.nvm/versions/node/v25.0.0/bin/node /home/me/pi-peers/
   - On a machine, only your user can reach an agent: owner-only folders, a 256-bit token per agent, and a constant-time token check.
   - Across machines, SSH does the authentication. pi-peers adds no login of its own and opens no port.
 - **Peers act with your permissions.** An agent that accepts a message can read, edit and run anything you can. The sender label (`[from pi-peers peer "pi1" … hop 1/3]`) tells you where a message came from, but **it is not proof**: any process running as you can claim any name.
+- **The owner gate (on by default)** works even when messages are delivered without asking (`allow`). While a peer's task is running, risky tool calls stop and ask you at that agent's terminal first. That covers pushing, deleting recursively, publishing, installing, `ssh`, credential files, and writes outside the working folder. A denied or unanswered call is blocked, and the agent is told to report `NEEDS OWNER`. pi itself runs tool calls without asking, so this gate is what stands between a peer's request and your machine. It is pattern-based: a safety net, not a sandbox.
 - **Keep `ask` unless you're sure.** `ask` shows a dialog with the message before delivering it. If it goes unanswered for 120 s, the message is refused, and an agent with no UI refuses outright. `allow` delivers without asking.
 - **Loops are capped:** a chain of peer messages stops at 3 hops.
 - **Tokens stay out of listings:** `pi-peers list` (also over SSH) and `get_state` never include them.

@@ -18,7 +18,7 @@ npm run typecheck                                  # tsc --noEmit; erasableSynta
 npm test                                           # unit + schema-compatibility tests (test/unit)
 node --test test/unit/discovery.test.ts            # a single test file
 node --test --test-name-pattern="resolveAgent" "test/unit/*.test.ts"   # a single test by name
-npm run test:e2e                                   # real headless pi agents; PI_CLI overrides pi's cli.js
+npm run test:e2e                                   # real headless pi agents; PI_CLI overrides pi's cli.js. test/e2e/faux-model.ts is a scripted model for tool-call tests
 npm run gen:types                                  # after editing schema/pi-peers-1.0.json
 npm run build                                      # dist/ (CLI only)
 ```
@@ -35,6 +35,7 @@ The code is TypeScript. pi loads the extension through jiti, straight from `src/
 | `src/discovery.ts` | Rendezvous directory `~/.pi-peers/agents/` (`PI_PEERS_HOME` overrides it), liveness pruning, resolving a peer by id, session name or label |
 | `src/client.ts` | Client: `hello`, then request/response matched by `id`, over any duplex stream |
 | `src/hosts.ts` | Phase 2: `$PI_PEERS_HOME/hosts`, remote `list`, `bridge` over `ssh <alias>`, and reverse links (`--reverse` → `expose`) |
+| `src/guard.ts` | Owner gate rules: which tool calls (shell patterns, write paths) need the owner in peer-started work. Pure, unit-tested |
 | `src/cli.ts` | CLI run on each host: `list [--json]`, `bridge <address>`, `expose` (far end of a reverse link). Run it as `node src/cli.ts …` (Node ≥ 22.18) |
 | `src/extension/index.ts` | The pi extension: pipe/socket server, tools `peers_list` / `peers_send` / `peers_read`, `/peers` command, inbound policy |
 | `.pi/extensions/pi-peers.ts` | Dev shim that loads the extension into pi agents started in this repo. It requires project trust; run `/reload` after changes |
